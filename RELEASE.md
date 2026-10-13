@@ -35,37 +35,29 @@ Configured behaviour (in `electron/updater.cjs`):
 
 ---
 
-## 2. REQUIRED: set your GitHub repository (one‑time)
+## 2. GitHub repository (already configured)
 
-The project is **not currently a Git repository** and contains no GitHub
-owner/repo information, so the publisher uses **placeholders** that you must
-replace. Edit `package.json` → `build.publish`:
+The publisher is configured for this repository:
 
-```json
-"publish": {
-  "provider": "github",
-  "owner": "YOUR_GITHUB_USERNAME_OR_ORG",
-  "repo": "YOUR_REPO_NAME",
-  "releaseType": "release"
-}
-```
+- **Repository:** `https://github.com/waqas1001ahmed/MediCore-LIS-Desktop`
+- **Owner:** `waqas1001ahmed`
+- **Repo:** `MediCore-LIS-Desktop`
 
-Replace `YOUR_GITHUB_USERNAME_OR_ORG` and `YOUR_REPO_NAME` with your real values,
-for example:
+`package.json` → `build.publish`:
 
 ```json
 "publish": {
   "provider": "github",
-  "owner": "waqas",
-  "repo": "medicore-lis",
+  "owner": "waqas1001ahmed",
+  "repo": "MediCore-LIS-Desktop",
   "releaseType": "release"
 }
 ```
 
 This block is also what tells **installed clients** where to check for updates
-(electron‑builder writes it into `resources/app-update.yml`). Until you set the
-real values, the updater will fail to find updates and the app keeps working
-normally (the failure is handled gracefully and logged).
+(electron‑builder writes it into `resources/app-update.yml` inside the packaged
+app). The repository must be **public** (or its releases publicly readable) for
+installed apps with no credentials to download updates — see section 7.
 
 ---
 
@@ -129,21 +121,27 @@ git push origin v1.0.1
 
 ### Option B — GitHub Actions (recommended, secure)
 
-1. Push the code to your GitHub repository (the repo from section 2).
-2. The workflow `.github/workflows/release.yml` runs on a `v*` tag push.
-3. It uses the built‑in `GITHUB_TOKEN` secret — **no secret is committed**.
-4. Trigger it:
+The workflow `.github/workflows/release.yml` runs **only** when a version tag is
+pushed. It verifies the tag matches `package.json` version, installs root and
+frontend dependencies, builds the frontend and the Windows installer, and
+publishes to GitHub Releases using the built‑in `GITHUB_TOKEN` (**no secret is
+committed**).
 
 ```powershell
-npm version patch          # updates version
-git push                   # push the version bump
-git tag v1.0.1
-git push origin v1.0.1     # starts the workflow -> builds & publishes
+npm version patch          # 1) bump version (updates package.json + lock)
+git push                   # 2) push the version bump to main
+git tag v1.0.1             # 3) create the matching tag
+git push origin v1.0.1     # 4) triggers the workflow -> builds & publishes
 ```
 
-If you prefer a Personal Access Token over the built‑in token, add it as a
-repository secret named `GH_TOKEN` (Settings → Secrets and variables → Actions)
-and change the workflow `env` to `GH_TOKEN: ${{ secrets.GH_TOKEN }}`.
+Notes:
+- The job is gated on `refs/tags/*`, so normal branch pushes never create a
+  release, and a tag that does **not** match `package.json` version fails the
+  build with a clear error (no partial/duplicate release).
+- Workflow permissions use `contents: write` with the built‑in `GITHUB_TOKEN`.
+  No Personal Access Token or other secret is required.
+- To re-run a release, use the **Re‑run jobs** button on the original tag run
+  (the job stays gated to the tag).
 
 ---
 

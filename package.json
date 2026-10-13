@@ -34,8 +34,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "YOUR_GITHUB_USERNAME_OR_ORG",
-      "repo": "YOUR_REPO_NAME",
+      "owner": "waqas1001ahmed",
+      "repo": "MediCore-LIS-Desktop",
       "releaseType": "release"
     }
   },
