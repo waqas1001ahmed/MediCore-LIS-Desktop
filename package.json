@@ -1,0 +1,53 @@
+{
+  "name": "labms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Blood / Laboratory Management System",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:frontend\" \"npm:dev:electron\"",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:electron": "wait-on http://localhost:5173 && electron .",
+    "start": "npm run dev",
+    "start:api": "npm --prefix backend start",
+    "build": "npm --prefix frontend run build",
+    "dist": "npm run build && electron-builder",
+    "release": "npm run build && electron-builder --publish always",
+    "make-icon": "npx png-to-ico electron/app-logo.png > electron/assets/icon.ico"
+  },
+  "build": {
+    "appId": "com.medicore.lis",
+    "productName": "MediCore LIS",
+    "npmRebuild": false,
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "electron/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "YOUR_GITHUB_USERNAME_OR_ORG",
+      "repo": "YOUR_REPO_NAME",
+      "releaseType": "release"
+    }
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "png-to-ico": "^3.0.2",
+    "wait-on": "^9.1.0"
+  },
+  "dependencies": {
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9"
+  }
+}

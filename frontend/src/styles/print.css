@@ -1,0 +1,448 @@
+/* ==========================================================================
+   Print layouts: A4 laboratory report + 80mm thermal receipt
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Shared print preview frame (screen)
+   -------------------------------------------------------------------------- */
+.print-stage {
+  background: #64748b;
+  min-height: 100vh;
+  padding: 20px 12px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  width: 100%;
+  max-width: 1000px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.print-toolbar .pt-title { font-weight: 650; font-size: 0.875rem; }
+.print-toolbar .pt-sub { font-size: 0.75rem; color: var(--text-subtle); }
+.print-toolbar .pt-spacer { flex: 1; }
+
+.print-sheet {
+  background: #ffffff;
+  color: #101828;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.35);
+  position: relative;
+}
+.print-sheet + .print-sheet { margin-top: 4px; }
+
+/* --------------------------------------------------------------------------
+   A4 Laboratory report
+   -------------------------------------------------------------------------- */
+@page report-page {
+  size: A4;
+  margin: 12mm 13mm 14mm;
+}
+
+.report-sheet {
+  width: 210mm;
+  min-height: 296mm;
+  padding: 12mm 13mm 14mm;
+  font-size: 10.5px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+}
+.report-sheet--no-header .report-patient { margin-top: 0; }
+
+.report-header {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2.5px solid #1f7a8c;
+}
+.report-org-banner {
+  width: 100%;
+  flex: 1 0 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 2px 8px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #cbd5e1;
+}
+.report-org-kind {
+  font-size: 8.4px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+  white-space: nowrap;
+}
+.report-org-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f2f3a;
+  letter-spacing: 0.01em;
+  text-align: right;
+  line-height: 1.2;
+}
+.report-logo {
+  width: 62px;
+  height: 62px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: none;
+  background: #f8fafc;
+}
+.report-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.report-logo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: #1f7a8c;
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+.report-lab { flex: 1; min-width: 0; }
+.report-lab-name {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f2f3a;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.report-lab-tagline { font-size: 10px; color: #475569; font-style: italic; }
+.report-lab-meta {
+  margin-top: 4px;
+  font-size: 9.6px;
+  color: #475569;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+.report-lab-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.report-header-right { text-align: right; flex: none; font-size: 9.6px; color: #475569; }
+.report-header-right .rh-label { color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; font-size: 8.4px; }
+.report-header-right .rh-value { font-weight: 700; color: #0f2f3a; font-family: var(--font-mono); font-size: 11px; }
+
+.report-title-band {
+  margin-top: 8px;
+  text-align: center;
+  background: #0f2f3a;
+  color: #ffffff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.report-patient {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.report-patient-col { padding: 0; }
+.report-patient-col + .report-patient-col { border-left: 1px solid #cbd5e1; }
+.report-patient-row {
+  display: grid;
+  grid-template-columns: 104px 1fr;
+  border-bottom: 1px solid #e2e8f0;
+}
+.report-patient-row:last-child { border-bottom: none; }
+.report-patient-row .rp-label {
+  background: #f1f5f9;
+  padding: 4px 8px;
+  font-size: 9.3px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-right: 1px solid #e2e8f0;
+}
+.report-patient-row .rp-value { padding: 4px 8px; font-size: 10.4px; font-weight: 500; color: #101828; }
+
+.report-results {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid #94a3b8;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.report-results table { width: 100%; border-collapse: collapse; }
+.report-results thead th {
+  background: #0f2f3a;
+  color: #ffffff;
+  font-size: 9.4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  padding: 6px 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+}
+.report-results thead th:last-child { border-right: none; }
+.report-results tbody td {
+  padding: 5px 8px;
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  font-size: 10.2px;
+  vertical-align: top;
+}
+.report-results tbody td:last-child { border-right: none; }
+.report-results tbody tr:nth-child(even) { background: #f8fafc; }
+.report-results .rc-test { font-weight: 600; color: #0f2f3a; }
+.report-results .rc-code { font-family: var(--font-mono); font-size: 8.6px; color: #64748b; }
+.report-results .rc-result { font-family: var(--font-mono); font-weight: 700; font-size: 11px; }
+.report-results .rc-reference { font-family: var(--font-mono); font-size: 9.4px; color: #475569; }
+.report-results .rc-flag { font-weight: 800; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; }
+.report-results .rc-flag.is-normal { color: #15803d; }
+.report-results .rc-flag.is-high,
+.report-results .rc-flag.is-critical { color: #b91c1c; }
+.report-results .rc-flag.is-low { color: #1d4ed8; }
+.report-results .rc-flag.is-abnormal { color: #b45309; }
+.report-results .rc-cat {
+  font-size: 8.8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1f7a8c;
+  background: #eff9fb;
+}
+.report-results .rc-remark { font-size: 9.4px; color: #475569; }
+
+.report-notes {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.report-note-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 7px 9px;
+  background: #f8fafc;
+}
+.report-note-box .rn-title {
+  font-size: 8.8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #0f2f3a;
+  margin-bottom: 3px;
+}
+.report-note-box .rn-body { font-size: 10px; color: #334155; }
+
+.report-footer-block { margin-top: auto; }
+
+.report-signatures {
+  margin-top: 0;
+  padding-top: 22px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: end;
+}
+.report-sign {
+  text-align: center;
+  font-size: 9.6px;
+}
+.report-sign .sign-line {
+  border-top: 1px solid #64748b;
+  margin-bottom: 4px;
+  height: 26px;
+}
+.report-sign .sign-name { font-weight: 700; color: #0f2f3a; font-size: 10.4px; }
+.report-sign .sign-role { color: #64748b; font-size: 9px; }
+
+.report-footer {
+  margin-top: 12px;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 8.8px;
+  color: #64748b;
+}
+.report-footer .rf-note { flex: 1; }
+.report-footer .rf-page { white-space: nowrap; font-family: var(--font-mono); }
+
+.report-watermark {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 0;
+}
+.report-watermark span {
+  font-size: 90px;
+  font-weight: 800;
+  color: rgba(15, 47, 58, 0.045);
+  transform: rotate(-24deg);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   80mm thermal receipt
+   -------------------------------------------------------------------------- */
+.receipt-sheet {
+  width: 80mm;
+  padding: 4mm 3.5mm 6mm;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.42;
+  color: #000000;
+}
+.receipt-center { text-align: center; }
+.receipt-logo { display: flex; justify-content: center; margin-bottom: 3px; }
+.receipt-logo img { max-width: 54mm; max-height: 20mm; object-fit: contain; }
+.receipt-lab-name {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.receipt-lab-sub { font-size: 10px; }
+.receipt-title {
+  margin: 5px 0 3px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.receipt-rule { border-top: 1px dashed #000; margin: 5px 0; }
+.receipt-rule-solid { border-top: 1px solid #000; margin: 5px 0; }
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 10.6px;
+}
+.receipt-row .rr-label { color: #000; }
+.receipt-row .rr-value { font-weight: 700; text-align: right; }
+.receipt-kv { display: flex; justify-content: space-between; gap: 6px; font-size: 10.6px; }
+.receipt-kv .kv-label { color: #333; }
+.receipt-kv .kv-value { font-weight: 700; }
+.receipt-items { width: 100%; font-size: 10.4px; }
+.receipt-items th {
+  text-align: left;
+  font-size: 9.4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #000;
+  padding: 2px 0;
+}
+.receipt-items th.num, .receipt-items td.num { text-align: right; }
+.receipt-items td { padding: 2px 0; vertical-align: top; }
+.receipt-items .ri-name { padding-right: 4px; }
+.receipt-totals { margin-top: 2px; }
+.receipt-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.6px;
+  padding: 1px 0;
+}
+.receipt-total-row.grand {
+  border-top: 1px solid #000;
+  border-bottom: 3px double #000;
+  margin-top: 3px;
+  padding: 3px 0;
+  font-size: 13px;
+  font-weight: 800;
+}
+.receipt-total-row.paid { font-size: 11.5px; font-weight: 800; }
+.receipt-badge {
+  display: inline-block;
+  border: 1px solid #000;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 9.6px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.receipt-sign { margin-top: 10px; display: flex; justify-content: space-between; gap: 10px; font-size: 9.6px; }
+.receipt-sign .sig-line { border-top: 1px solid #000; width: 42mm; text-align: center; padding-top: 2px; }
+.receipt-footer { margin-top: 6px; text-align: center; font-size: 10px; }
+.receipt-barcode {
+  margin: 5px auto 2px;
+  text-align: center;
+  font-family: var(--font-mono);
+  letter-spacing: 2px;
+  font-size: 10px;
+}
+.receipt-barcode .bc-digits { letter-spacing: 1px; font-size: 9.4px; }
+.receipt-note { font-size: 9.2px; text-align: center; color: #222; }
+
+/* --------------------------------------------------------------------------
+   Print media
+   -------------------------------------------------------------------------- */
+@media print {
+  html, body {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .no-print,
+  .sidebar,
+  .topbar,
+  .print-toolbar,
+  .toast-stack {
+    display: none !important;
+  }
+  .print-stage {
+    background: #ffffff !important;
+    padding: 0 !important;
+    display: block !important;
+    min-height: 0 !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: auto !important;
+  }
+  .report-sheet {
+    page: report-page;
+    width: auto;
+    min-height: 271mm;
+    padding: 0;
+  }
+  .receipt-sheet { width: auto; padding: 0; }
+  .report-watermark { position: fixed; }
+  .page-break { page-break-before: always; break-before: page; }
+  .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+}
+
+@media (max-width: 800px) {
+  .report-sheet {
+    width: 100%;
+    min-height: 0;
+    padding: 14px;
+    font-size: 10px;
+  }
+  .receipt-sheet { width: 80mm; }
+}

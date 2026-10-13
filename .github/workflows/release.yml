@@ -1,0 +1,44 @@
+name: Release Windows App
+
+# Secure publishing pipeline for the MediCore-LIS Windows desktop app.
+#
+# The GitHub token is provided by Actions via the built-in GITHUB_TOKEN secret
+# (or a Personal Access Token stored as the GH_TOKEN repository secret).
+# No token is ever committed to the repository.
+#
+# Trigger by pushing a version tag, e.g.:
+#   git tag v1.0.1 && git push origin v1.0.1
+# The tag version (without the leading "v") must match package.json "version".
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write # required to create the GitHub Release and upload assets
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build and publish Windows installer to GitHub Releases
+        env:
+          # electron-builder reads GH_TOKEN for GitHub publishing.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --publish always
