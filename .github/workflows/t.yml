@@ -1,7 +1,7 @@
 name: Release Windows App
 
 # Secure publishing pipeline for the MediCore-LIS Windows desktop app.
-#
+##
 # Triggered by pushing a version tag that matches the root package.json version:
 #   npm version patch            # e.g. 1.0.0 -> 1.0.1
 #   git push && git push origin v1.0.1
