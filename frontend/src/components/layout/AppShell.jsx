@@ -43,6 +43,7 @@ const NAVIGATION = [
       { to: '/users', label: 'Users', icon: 'user-check', permission: 'users.view' },
       { to: '/roles', label: 'Roles & Permissions', icon: 'shield', permission: 'roles.view' },
       { to: '/audit', label: 'Audit Log', icon: 'activity', permission: 'audit.view' },
+      { to: '/sessions', label: 'Active Sessions', icon: 'shield', permission: 'users.view' },
       { to: '/settings', label: 'Settings', icon: 'settings', permission: 'settings.view' },
     ],
   },
@@ -61,6 +62,7 @@ const PAGE_TITLES = {
   '/users': 'User Management',
   '/roles': 'Roles & Permissions',
   '/audit': 'Audit Log',
+  '/sessions': 'Active Sessions',
   '/settings': 'Laboratory Settings',
   '/profile': 'My Profile',
 };

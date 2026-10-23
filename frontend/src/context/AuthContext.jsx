@@ -1,28 +1,54 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { api, TOKEN_KEY, USER_KEY, apiError } from '../api/client.js';
+import {
+  api, TOKEN_KEY, USER_KEY, apiError, readToken, writeToken, clearToken, writeRemember, isTokenPersistent,
+} from '../api/client.js';
 
 const AuthContext = createContext(null);
 
 function readStoredUser() {
   try {
-    const raw = localStorage.getItem(USER_KEY);
+    const raw = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
+function writeStoredUser(user) {
+  localStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  if (!user) return;
+  const raw = JSON.stringify(user);
+  // The user profile follows the token: remembered sign-ins live in
+  // localStorage, temporary ones in sessionStorage.
+  if (localStorage.getItem(TOKEN_KEY)) localStorage.setItem(USER_KEY, raw);
+  else sessionStorage.setItem(USER_KEY, raw);
+}
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState(() => readToken());
   const [user, setUser] = useState(() => readStoredUser());
-  const [booting, setBooting] = useState(!!localStorage.getItem(TOKEN_KEY));
+  const [booting, setBooting] = useState(!!readToken());
   const [authError, setAuthError] = useState(null);
 
-  const persist = useCallback((nextToken, nextUser) => {
-    if (nextToken) localStorage.setItem(TOKEN_KEY, nextToken);
-    else localStorage.removeItem(TOKEN_KEY);
-    if (nextUser) localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
-    else localStorage.removeItem(USER_KEY);
+  /**
+   * Stores the session.
+   *
+   * `remember` decides where the token lives: `localStorage` for a remembered
+   * sign-in, `sessionStorage` for a temporary one. When it is not supplied the
+   * current storage location is preserved, so refreshing the profile never
+   * silently promotes a temporary session to a persistent one.
+   */
+  const persist = useCallback((nextToken, nextUser, remember = null) => {
+    if (nextToken) {
+      const persistent = remember === null ? isTokenPersistent() : remember;
+      writeToken(nextToken, persistent);
+      writeRemember(persistent);
+    } else {
+      clearToken();
+      writeRemember(false);
+    }
+    writeStoredUser(nextUser);
     setToken(nextToken || null);
     setUser(nextUser || null);
   }, []);
@@ -38,11 +64,11 @@ export function AuthProvider({ children }) {
   );
 
   const login = useCallback(
-    async (username, password) => {
+    async (username, password, remember = false) => {
       setAuthError(null);
       try {
-        const { data } = await api.post('/auth/login', { username, password });
-        persist(data.token, data.user);
+        const { data } = await api.post('/auth/login', { username, password, remember });
+        persist(data.token, data.user, remember);
         return data.user;
       } catch (error) {
         const message = apiError(error, 'Unable to sign in. Please try again.');
@@ -55,27 +81,27 @@ export function AuthProvider({ children }) {
 
   /** Refreshes the current user (permissions may have changed). */
   const refresh = useCallback(async () => {
-    if (!localStorage.getItem(TOKEN_KEY)) return null;
+    if (!readToken()) return null;
     try {
       const { data } = await api.get('/auth/me');
-      persist(token, data.user);
+      persist(readToken(), data.user);
       return data.user;
     } catch {
       return null;
     }
-  }, [persist, token]);
+  }, [persist]);
 
   // Validate the stored session once on boot.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!localStorage.getItem(TOKEN_KEY)) {
+      if (!readToken()) {
         setBooting(false);
         return;
       }
       try {
         const { data } = await api.get('/auth/me');
-        if (!cancelled) persist(localStorage.getItem(TOKEN_KEY), data.user);
+        if (!cancelled) persist(readToken(), data.user);
       } catch {
         if (!cancelled) persist(null, null);
       } finally {
@@ -109,7 +135,7 @@ export function AuthProvider({ children }) {
       login,
       logout,
       refresh,
-      setUser: (nextUser) => persist(localStorage.getItem(TOKEN_KEY), nextUser),
+      setUser: (nextUser) => persist(readToken(), nextUser),
     }),
     [token, user, booting, authError, login, logout, refresh, persist],
   );

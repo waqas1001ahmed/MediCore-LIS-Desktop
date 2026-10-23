@@ -27,6 +27,7 @@ import RevenuePage from './pages/revenue/RevenuePage.jsx';
 import UsersPage from './pages/admin/UsersPage.jsx';
 import RolesPage from './pages/admin/RolesPage.jsx';
 import AuditPage from './pages/admin/AuditPage.jsx';
+import ActiveSessionsPage from './pages/admin/ActiveSessionsPage.jsx';
 
 const PrintReport = lazy(() => import('./pages/reports/PrintReport.jsx'));
 const PrintReceipt = lazy(() => import('./pages/receipts/PrintReceipt.jsx'));
@@ -214,6 +215,14 @@ export default function App() {
             element={
               <Protected permissions={['audit.view']}>
                 <AuditPage />
+              </Protected>
+            }
+          />
+          <Route
+            path="sessions"
+            element={
+              <Protected permissions={['users.view']}>
+                <ActiveSessionsPage />
               </Protected>
             }
           />

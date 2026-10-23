@@ -9,6 +9,50 @@ export const APP_NAME = import.meta.env.VITE_APP_NAME || 'MediCore LIS';
 export const TOKEN_KEY = 'labms.token';
 export const USER_KEY = 'labms.user';
 export const THEME_KEY = 'labms.theme';
+export const REMEMBER_KEY = 'labms.remember';
+
+/**
+ * The token is stored in localStorage when the user asks to be remembered and
+ * in sessionStorage otherwise. A session-scoped token disappears when the
+ * browser tab closes, which is the "do not remember me" behaviour.
+ */
+export function readToken() {
+  return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY) || '';
+}
+
+export function writeToken(token, remember = false) {
+  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  if (!token) return;
+  if (remember) localStorage.setItem(TOKEN_KEY, token);
+  else sessionStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+export function readRemember() {
+  return localStorage.getItem(REMEMBER_KEY) === '1';
+}
+
+export function writeRemember(remember) {
+  if (remember) localStorage.setItem(REMEMBER_KEY, '1');
+  else localStorage.removeItem(REMEMBER_KEY);
+}
+
+/**
+ * Tells whether the current token is stored persistently.
+ *
+ * The storage location is the single source of truth: a token in
+ * `localStorage` survives a browser restart, one in `sessionStorage` does not.
+ * Deriving the flag from it avoids the stored preference drifting out of sync
+ * with where the token actually lives.
+ */
+export function isTokenPersistent() {
+  return !!localStorage.getItem(TOKEN_KEY);
+}
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -17,7 +61,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = readToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

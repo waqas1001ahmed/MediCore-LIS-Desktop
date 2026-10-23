@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { asyncHandler, ApiError } from '../utils/errors.js';
 import { recordMongoAudit, getRoleById, getRoleByName, getUserById, findUsers, nextIdentityId, identityCollectionsForUse, withIdentityTransaction } from '../db/identity.js';
+import { revokeUserSessions, revokeSessionById, listAllActiveSessions } from '../db/sessions.js';
 import { now } from '../utils/time.js';
 import { assert, requireFields, toBool, paginate } from '../utils/validate.js';
 
@@ -18,6 +19,43 @@ router.get('/', requirePermission('users.view'), asyncHandler(async (req, res) =
   const { page, limit, offset } = paginate(req.query);
   const { total, rows } = await findUsers({ search: (req.query.search || '').trim(), roleId: req.query.role_id, status: req.query.status, limit, offset });
   res.json({ data: rows, meta: { total, page, limit, pages: Math.ceil(total / limit) || 1 } });
+}));
+
+/** Lists every active session across all users (administrators only). */
+router.get('/sessions/active', requirePermission('users.view'), asyncHandler(async (req, res) => {
+  const active = await listAllActiveSessions();
+  res.json({
+    data: active.map((session) => ({
+      id: session.id,
+      user_id: session.user_id,
+      username: session.username,
+      full_name: session.full_name,
+      ip: session.ip,
+      user_agent: session.user_agent,
+      created_at: session.created_at,
+      expires_at: session.expires_at,
+      // Lets the admin page tell "this device" apart from the other devices
+      // and avoid signing themselves out by accident.
+      current: session.token_id === req.sessionId,
+    })),
+  });
+}));
+
+/** Revokes a single session by id (administrators only). */
+router.delete('/sessions/:id', requirePermission('users.view'), asyncHandler(async (req, res) => {
+  const collections = await identityCollectionsForUse();
+  const session = await collections.sessions.findOne({ id: Number(req.params.id) });
+  if (!session) throw ApiError.notFound('Session not found');
+  await revokeSessionById(session.id);
+  await recordMongoAudit({
+    req,
+    action: 'revoke_session',
+    module: 'auth',
+    entity: 'user',
+    entityId: session.user_id,
+    description: `Revoked session #${session.id}`,
+  });
+  res.json({ message: 'Session revoked' });
 }));
 
 router.get('/:id', requirePermission('users.view'), asyncHandler(async (req, res) => {
@@ -88,6 +126,11 @@ router.put('/:id', requirePermission('users.edit'), asyncHandler(async (req, res
     if (duplicateKey(error)) throw ApiError.conflict('That username is already taken');
     throw error;
   }
+  // Deactivating an account or changing its password must end the existing sessions.
+  const deactivated = updates.is_active === 0 && existing.is_active !== 0;
+  if (deactivated || updates.password_hash) {
+    await revokeUserSessions(id);
+  }
   await recordMongoAudit({ req, action: 'update', module: 'users', entity: 'user', entityId: id, description: `Updated user "${existing.username}"` });
   const updated = await findUsers({ search: username, limit: 1, offset: 0 });
   res.json({ data: updated.rows.find((row) => row.id === id) });
@@ -101,6 +144,8 @@ router.post('/:id/reset-password', requirePermission('users.edit'), asyncHandler
   assert(String(req.body.password).length >= 6, 'Password must be at least 6 characters');
   const collections = await identityCollectionsForUse();
   await collections.users.updateOne({ id }, { $set: { password_hash: await bcrypt.hash(String(req.body.password), config.bcryptRounds), must_change_password: toBool(req.body.must_change_password, true) ? 1 : 0, failed_attempts: 0, locked_until: null, updated_at: now() } });
+  // A forced password reset must invalidate every existing session of that user.
+  await revokeUserSessions(id);
   await recordMongoAudit({ req, action: 'reset_password', module: 'users', entity: 'user', entityId: id, description: `Reset password for "${user.username}"` });
   res.json({ message: 'Password reset successfully' });
 }));

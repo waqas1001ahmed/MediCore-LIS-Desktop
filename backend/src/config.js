@@ -46,7 +46,14 @@ export const config = {
   jwt: {
     secret: process.env.JWT_SECRET || 'insecure-development-secret-change-me',
     expiresIn: process.env.JWT_EXPIRES_IN || '12h',
+    rememberExpiresIn: process.env.JWT_REMEMBER_EXPIRES_IN || '30d',
     usedFallbackSecret: !process.env.JWT_SECRET,
+  },
+  sessions: {
+    // Idle lifetime of a normal (non "remember me") session.
+    ttlSeconds: Number(process.env.SESSION_TTL_SECONDS || 12 * 60 * 60),
+    // Lifetime of a session created from the login screen's "remember me" option.
+    rememberTtlSeconds: Number(process.env.SESSION_REMEMBER_TTL_SECONDS || 30 * 24 * 60 * 60),
   },
   bcryptRounds: Number(process.env.BCRYPT_ROUNDS || 10),
   corsOrigins: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://127.0.0.1:5173')
@@ -60,3 +67,16 @@ export const config = {
   },
   trustProxy: bool(process.env.TRUST_PROXY, true),
 };
+
+/**
+ * Refuse to boot in production with the well-known development secret.
+ *
+ * A Vercel deployment that forgot to set JWT_SECRET would otherwise sign every
+ * token with a value published in this repository, which would let anyone
+ * forge an admin session. Failing fast is far safer than booting insecurely.
+ */
+if (config.isProduction && config.jwt.usedFallbackSecret) {
+  throw new Error(
+    'JWT_SECRET must be set in production. Refusing to start with the development fallback secret.',
+  );
+}

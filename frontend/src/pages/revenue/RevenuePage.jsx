@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, TOKEN_KEY, API_BASE_URL } from '../../api/client.js';
+import { api, API_BASE_URL, readToken } from '../../api/client.js';
 import { useFetch } from '../../hooks/useApi.js';
 import { useSettings } from '../../context/SettingsContext.jsx';
 import { PageHeader } from '../../components/PageHeader.jsx';
@@ -45,7 +45,9 @@ export default function RevenuePage() {
   }, [range]);
 
   const exportCsv = async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
+    // The token may live in sessionStorage (temporary session) or localStorage
+    // (remembered session), so it has to be read through the shared helper.
+    const token = readToken();
     const response = await fetch(`${API_BASE_URL}/revenue/export?range=${range}`, {
       headers: { Authorization: `Bearer ${token}` },
     });

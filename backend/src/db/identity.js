@@ -3,7 +3,7 @@ import { PERMISSIONS } from '../utils/permissions.js';
 
 let initialized;
 
-const ID_TABLES = ['users', 'roles', 'permissions', 'role_permissions', 'audit_logs'];
+const ID_TABLES = ['users', 'roles', 'permissions', 'role_permissions', 'audit_logs', 'sessions'];
 
 function identityCollections(database) {
   return {
@@ -33,6 +33,8 @@ export async function initializeIdentityStore() {
       [collections.permissions, { code: 1 }, { unique: true, name: 'permissions_code_unique' }],
       [collections.rolePermissions, { role_id: 1, permission_id: 1 }, { unique: true, name: 'role_permissions_pair_unique' }],
       [collections.sequences, { name: 1, period: 1 }, { unique: true, name: 'sequences_name_period_unique' }],
+      [collections.sessions, { token_id: 1 }, { unique: true, name: 'sessions_token_unique' }],
+      [collections.sessions, { user_id: 1 }, { name: 'sessions_user_id' }],
     ];
     for (const [collection, keys, options] of indexes) {
       try { await collection.createIndex(keys, options); } catch (error) { if (![85, 86].includes(error.code)) throw error; }

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { resolveAssetUrl } from '../api/client.js';
+import { resolveAssetUrl, readRemember, writeRemember } from '../api/client.js';
 import Icon from '../components/ui/Icon.jsx';
-import { Button, Field, Input, Alert } from '../components/ui/index.jsx';
+import { Button, Checkbox, Field, Input, Alert } from '../components/ui/index.jsx';
 
 export default function Login() {
   const { login, isAuthenticated, user, authError, clearAuthError } = useAuth();
@@ -13,6 +13,7 @@ export default function Login() {
   const location = useLocation();
   const [form, setForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(() => readRemember());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -38,7 +39,8 @@ export default function Login() {
     }
     setSubmitting(true);
     try {
-      const signedIn = await login(form.username.trim(), form.password);
+      const signedIn = await login(form.username.trim(), form.password, remember);
+      writeRemember(remember);
       if (signedIn?.must_change_password) navigate('/profile?tab=password', { replace: true });
       else navigate(from, { replace: true });
     } catch (loginError) {
@@ -139,6 +141,12 @@ export default function Login() {
                 </button>
               </div>
             </Field>
+
+            <Checkbox
+              label="Keep me signed in on this device"
+              checked={remember}
+              onChange={(event) => setRemember(event.target.checked)}
+            />
 
             <Button type="submit" variant="primary" size="lg" loading={submitting} icon={submitting ? undefined : 'log-in'}>
               {submitting ? 'Signing in…' : 'Sign in'}

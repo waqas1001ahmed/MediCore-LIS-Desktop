@@ -5,17 +5,19 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHeader } from '../components/PageHeader.jsx';
 import {
-  Alert, Avatar, Button, Card, CardBody, CardHeader, Field, Input, Tabs,
+  Alert, Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, LoadingBlock, TableShell, Tabs,
 } from '../components/ui/index.jsx';
 import { formatDateTime } from '../utils/format.js';
 
 const EMPTY_PASSWORD = { currentPassword: '', newPassword: '', confirm: '' };
+const VALID_TABS = ['profile', 'password', 'sessions'];
 
 export default function ProfilePage() {
   const { user, setUser, refresh } = useAuth();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
-  const [tab, setTab] = useState(params.get('tab') === 'password' ? 'password' : 'profile');
+  const requestedTab = params.get('tab');
+  const [tab, setTab] = useState(VALID_TABS.includes(requestedTab) ? requestedTab : 'profile');
   const [form, setForm] = useState({
     full_name: user?.full_name || '',
     email: user?.email || '',
@@ -26,9 +28,64 @@ export default function ProfilePage() {
   const [pass, setPass] = useState(EMPTY_PASSWORD);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [revokingId, setRevokingId] = useState(null);
+
+  const loadSessions = async () => {
+    setSessionsLoading(true);
+    try {
+      const { data } = await api.get('/auth/sessions');
+      setSessions(data.sessions || []);
+    } catch (loadError) {
+      setError(apiError(loadError, 'Unable to load active sessions'));
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setParams(tab === 'password' ? { tab: 'password' } : {}, { replace: true });
+    if (tab === 'sessions') loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  const revokeOthers = async () => {
+    setRevoking(true);
+    try {
+      const { data } = await api.post('/auth/sessions/revoke-others');
+      toast.success(data.message || 'Other sessions signed out');
+      await loadSessions();
+    } catch (revokeError) {
+      toast.error(apiError(revokeError, 'Unable to sign out other sessions'));
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  /** Signs out one specific session of the signed-in user. */
+  const revokeSession = async (session) => {
+    setRevokingId(session.id);
+    try {
+      await api.delete(`/auth/sessions/${session.id}`);
+      toast.success('Session signed out');
+      await loadSessions();
+    } catch (revokeError) {
+      toast.error(apiError(revokeError, 'Unable to sign out that session'));
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
+  // A URL change (deep link or browser back/forward) selects the matching tab.
+  useEffect(() => {
+    if (VALID_TABS.includes(requestedTab)) setTab(requestedTab);
+  }, [requestedTab]);
+
+  // Keeps the URL in sync with the selected tab so a refresh (or a shared
+  // link) restores the same tab instead of always falling back to "Profile".
+  useEffect(() => {
+    setParams(tab === 'profile' ? {} : { tab }, { replace: true });
   }, [tab, setParams]);
 
   useEffect(() => {
@@ -103,6 +160,7 @@ export default function ProfilePage() {
         tabs={[
           { value: 'profile', label: 'Profile', icon: 'user' },
           { value: 'password', label: 'Password', icon: 'key' },
+          { value: 'sessions', label: 'Sessions', icon: 'shield' },
         ]}
       />
 
@@ -140,7 +198,7 @@ export default function ProfilePage() {
             </form>
           </CardBody>
         </Card>
-      ) : (
+      ) : tab === 'password' ? (
         <Card>
           <CardHeader title="Change password" subtitle="Use a unique password of at least 6 characters." />
           <CardBody>
@@ -158,6 +216,70 @@ export default function ProfilePage() {
                 <Button type="submit" variant="primary" loading={saving} icon="lock">Update password</Button>
               </div>
             </form>
+          </CardBody>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader
+            title="Active sessions"
+            subtitle="Devices currently signed in to your account."
+            actions={
+              <Button variant="secondary" icon="refresh" loading={revoking} onClick={revokeOthers}>
+                Sign out other sessions
+              </Button>
+            }
+          />
+          <CardBody>
+            {sessionsLoading ? (
+              <LoadingBlock label="Loading sessions…" />
+            ) : sessions.length === 0 ? (
+              <EmptyState icon="shield" title="No active sessions" description="You are signed in on this device only." />
+            ) : (
+              <TableShell compact>
+                <thead>
+                  <tr>
+                    <th>Device</th>
+                    <th>IP address</th>
+                    <th>Signed in</th>
+                    <th>Expires</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessions.map((session) => (
+                    <tr key={session.id}>
+                      <td>
+                        <div className="fw-550">{session.current ? 'This device' : 'Another device'}</div>
+                        <div className="text-xs text-subtle">{session.user_agent || 'Unknown device'}</div>
+                      </td>
+                      <td className="mono">{session.ip || '—'}</td>
+                      <td className="text-xs text-muted">{formatDateTime(session.created_at)}</td>
+                      <td>
+                        <div className="d-flex align-center gap-2">
+                          <span className="text-xs text-muted">{formatDateTime(session.expires_at)}</span>
+                          {session.current && <Badge tone="success">Current</Badge>}
+                        </div>
+                      </td>
+                      <td className="nowrap">
+                        {session.current ? (
+                          <span className="text-xs text-subtle">—</span>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            icon="logout"
+                            loading={revokingId === session.id}
+                            onClick={() => revokeSession(session)}
+                          >
+                            Sign out
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </TableShell>
+            )}
           </CardBody>
         </Card>
       )}
