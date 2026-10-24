@@ -45,9 +45,39 @@
 /* --------------------------------------------------------------------------
    A4 Laboratory report
    -------------------------------------------------------------------------- */
-@page report-page {
+/* --------------------------------------------------------------------------
+   Page size and margins for printed output
+   -------------------------------------------------------------------------- */
+@page {
   size: A4;
-  margin: 12mm 13mm 14mm;
+  margin: 12mm 13mm 18mm 13mm;
+
+  /* Repeating page footer on every printed A4 page. Margin boxes live outside
+     the content area, so report content can never overflow into them and page
+     breaks never cause duplication or overlap. */
+  @bottom-left {
+    content: string(footerNote);
+    font-size: 8.8px;
+    color: #64748b;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 6px;
+    margin-top: 2mm;
+    text-align: left;
+    vertical-align: bottom;
+  }
+  @bottom-right {
+    content: counter(page) " of " counter(pages);
+    font-size: 8.8px;
+    color: #64748b;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    margin-top: 2mm;
+    vertical-align: bottom;
+  }
+}
+@page receipt-page {
+  size: 80mm auto;
+  margin: 0;
 }
 
 .report-sheet {
@@ -254,6 +284,13 @@
 }
 .report-note-box .rn-body { font-size: 10px; color: #334155; }
 
+.report-footer-string {
+  string-set: footerNote content();
+  visibility: hidden;
+  font-size: 0;
+  pointer-events: none;
+}
+
 .report-footer-block { margin-top: auto; }
 
 .report-signatures {
@@ -426,12 +463,29 @@
     width: auto !important;
   }
   .report-sheet {
-    page: report-page;
+    break-before: page;
     width: auto;
-    min-height: 271mm;
     padding: 0;
+    padding-bottom: 80mm;
+    display: flex;
+    flex-direction: column;
   }
-  .receipt-sheet { width: auto; padding: 0; }
+  /* Position the signature/footer section at the bottom of every printed page.
+     position: fixed in @media print anchors the element to the page box (not the
+     viewport), so it repeats on every page of a multi-page report. The padding
+     reserved above prevents report content from flowing into the footer area.
+     @page margin boxes handle the page number and footer note text. */
+  .report-footer-block {
+    position: fixed;
+    bottom: 18mm;
+    left: 13mm;
+    right: 13mm;
+  }
+  /* Hide the simple text footer from document flow; it is rendered by
+     @page margin boxes on every page instead. Signatures remain via
+     .report-footer-block positioned at the bottom of each page. */
+  .report-footer { display: none !important; }
+  .receipt-sheet { page: receipt-page; width: auto; padding: 0; }
   .report-watermark { position: fixed; }
   .page-break { page-break-before: always; break-before: page; }
   .avoid-break { page-break-inside: avoid; break-inside: avoid; }

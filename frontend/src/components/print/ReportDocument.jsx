@@ -37,6 +37,11 @@ export default function ReportDocument({ payload, compact = false, showHeader = 
 
   return (
     <article className={`print-sheet report-sheet ${compact ? '' : ''}${showHeader ? '' : ' report-sheet--no-header'}`}>
+      {showFooter && (
+        <span className="report-footer-string" aria-hidden="true">
+          {settings?.report_footer}
+        </span>
+      )}
       {watermark && (
         <div className="report-watermark"><span>{watermark}</span></div>
       )}
