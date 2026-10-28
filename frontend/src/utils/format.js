@@ -1,31 +1,57 @@
 /** Formatting helpers shared across the application. */
 
-/** Parses the backend `YYYY-MM-DD HH:MM:SS` format safely across browsers. */
+/** Parses the backend timestamp safely across browsers. */
 export function parseDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value;
-  const normalised = String(value).includes('T') ? value : String(value).replace(' ', 'T');
-  const date = new Date(normalised);
+  const s = String(value);
+  // ISO strings with explicit timezone (Z or offset) are parsed correctly as-is
+  if (s.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(s)) {
+    const date = new Date(s);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  // All other strings (legacy "YYYY-MM-DD HH:MM:SS" or ISO without timezone)
+  // are stored as UTC on the server; treat them as UTC
+  const normalised = s.includes('T') ? s : s.replace(' ', 'T');
+  const date = new Date(normalised + 'Z');
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export function formatDate(value, fallback = '—') {
   const date = parseDate(value);
   if (!date) return fallback;
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    timeZone: 'Asia/Karachi',
+  });
 }
 
 export function formatDateInput(value) {
   const date = parseDate(value);
   if (!date) return '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Karachi',
+  });
+  const parts = formatter.formatToParts(date);
+  const year = parts.find((p) => p.type === 'year').value;
+  const month = parts.find((p) => p.type === 'month').value;
+  const day = parts.find((p) => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
 }
 
 export function formatTime(value, fallback = '—') {
   const date = parseDate(value);
   if (!date) return fallback;
-  return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Karachi',
+  });
 }
 
 export function formatDateTime(value, fallback = '—') {
@@ -38,8 +64,12 @@ export function formatLongDateTime(value, fallback = '—') {
   const date = parseDate(value);
   if (!date) return fallback;
   return date.toLocaleString(undefined, {
-    year: 'numeric', month: 'short', day: '2-digit',
-    hour: '2-digit', minute: '2-digit',
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Karachi',
   });
 }
 

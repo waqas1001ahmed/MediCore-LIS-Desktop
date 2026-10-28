@@ -75,11 +75,6 @@
     vertical-align: bottom;
   }
 }
-@page receipt-page {
-  size: 80mm auto;
-  margin: 0;
-}
-
 .report-sheet {
   width: 210mm;
   min-height: 296mm;
@@ -435,9 +430,20 @@
 .receipt-barcode .bc-digits { letter-spacing: 1px; font-size: 9.4px; }
 .receipt-note { font-size: 9.2px; text-align: center; color: #222; }
 
+@page {
+  size: A4;
+  margin: 12mm 13mm 18mm 13mm;
+}
+
+.receipt-footer {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 10px;
+}
+
 /* --------------------------------------------------------------------------
-   Print media
-   -------------------------------------------------------------------------- */
+    Print-specific rules
+    -------------------------------------------------------------------------- */
 @media print {
   html, body {
     background: #ffffff !important;
@@ -481,11 +487,8 @@
     left: 13mm;
     right: 13mm;
   }
-  /* Hide the simple text footer from document flow; it is rendered by
-     @page margin boxes on every page instead. Signatures remain via
-     .report-footer-block positioned at the bottom of each page. */
-  .report-footer { display: none !important; }
-  .receipt-sheet { page: receipt-page; width: auto; padding: 0; }
+  /* Signatures remain via .report-footer-block positioned at the bottom of each page. */
+  .receipt-sheet { width: auto; padding: 0; }
   .report-watermark { position: fixed; }
   .page-break { page-break-before: always; break-before: page; }
   .avoid-break { page-break-inside: avoid; break-inside: avoid; }

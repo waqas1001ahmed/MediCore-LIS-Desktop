@@ -1,27 +1,35 @@
 /**
- * Parses a stored `YYYY-MM-DD HH:MM:SS` timestamp.
+ * Parses a stored timestamp.
  *
- * The app stores every timestamp in local time (see `now`), so it must also be
- * read back as local time. Parsing it as UTC would shift every stored value by
- * the server's UTC offset.
+ * Timestamps are stored as UTC instants (ISO 8601 with `Z` suffix). Older
+ * records may use the legacy `YYYY-MM-DD HH:MM:SS` format without a timezone;
+ * those were stored as UTC on the server, so they are also interpreted as UTC.
  */
 export function parseStoredDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value;
-  const normalised = String(value).includes('T') ? value : String(value).replace(' ', 'T');
-  const date = new Date(normalised);
+  const s = String(value);
+  // ISO strings with explicit timezone (Z or offset) are parsed correctly as-is
+  if (s.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(s)) {
+    const date = new Date(s);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  // All other strings (legacy "YYYY-MM-DD HH:MM:SS" or ISO without timezone)
+  // are stored as UTC on the server; treat them as UTC
+  const normalised = s.includes('T') ? s : s.replace(' ', 'T');
+  const date = new Date(normalised + 'Z');
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
- * Formats a date as the local `YYYY-MM-DD HH:MM:SS` string used for storage.
+ * Formats a date as a UTC ISO 8601 string for storage.
  *
- * Every timestamp in the app is stored in local time, so writing and reading
- * must always go through this helper and `parseStoredDate` to stay in sync.
+ * Every timestamp is stored as a UTC instant so that it can be converted to
+ * any timezone (Asia/Karachi for display) without depending on the server's
+ * local time.
  */
 export function formatStoredDate(date = new Date()) {
-  const pad = (value) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  return date.toISOString();
 }
 
 export function now(date = new Date()) {

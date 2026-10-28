@@ -14,14 +14,50 @@ function validate(body, partial = false) { if (!partial) requireFields(body, ['f
 
 router.get('/', requirePermission('patients.view'), asyncHandler(async (req, res) => {
 	const { page, limit, offset } = paginate(req.query);
-	const filter = { is_deleted: 0 };
+	let filter = { is_deleted: 0 };
 	if (req.query.gender) filter.gender = req.query.gender;
 	if (req.query.doctor_id) filter.referred_by = Number(req.query.doctor_id);
 	if (req.query.search) {
 		const r = regex(req.query.search);
 		filter.$or = [{ full_name: r }, { patient_code: r }, { phone: r }, { email: r }];
 	}
-
+	// Date range filter: default to today and yesterday in Asia/Karachi timezone
+	// unless explicit start_date/end_date are provided.
+	// created_at is stored as a string, so $expr with $dateFromString is used
+	// for type-safe comparison against Date boundaries.
+	let dateExpr = null;
+	if (req.query.start_date && req.query.end_date) {
+		dateExpr = {
+			$expr: {
+				$and: [
+					{ $gte: [{ $dateFromString: { dateString: '$created_at', onError: null } }, new Date(req.query.start_date)] },
+					{ $lt: [{ $dateFromString: { dateString: '$created_at', onError: null } }, new Date(req.query.end_date)] },
+				],
+			},
+		};
+	} else {
+		// Default: patients registered today and yesterday in Asia/Karachi timezone
+		const now = new Date();
+		const karachiOffset = 5 * 60 * 60 * 1000; // 5 hours in ms
+		const karachiNow = new Date(now.getTime() + karachiOffset);
+		const karachiTodayMidnight = new Date(karachiNow.getFullYear(), karachiNow.getMonth(), karachiNow.getDate());
+		const karachiYesterdayMidnight = new Date(karachiTodayMidnight.getTime() - 24 * 60 * 60 * 1000);
+		const karachiTomorrowMidnight = new Date(karachiTodayMidnight.getTime() + 24 * 60 * 60 * 1000);
+		// Convert Karachi day boundaries to UTC instants for MongoDB comparison
+		const startDateUTC = new Date(karachiYesterdayMidnight.getTime() - karachiOffset);
+		const endDateUTC = new Date(karachiTomorrowMidnight.getTime() - karachiOffset);
+		dateExpr = {
+			$expr: {
+				$and: [
+					{ $gte: [{ $dateFromString: { dateString: '$created_at', onError: null } }, startDateUTC] },
+					{ $lt: [{ $dateFromString: { dateString: '$created_at', onError: null } }, endDateUTC] },
+				],
+			},
+		};
+	}
+	if (dateExpr) {
+		filter = { ...filter, ...dateExpr };
+	}
 	const { collections } = await appStore();
 	const total = await collections.patients.countDocuments(filter);
 	const rows = await collections.patients.find(filter).sort({ created_at: -1, id: -1 }).skip(offset).limit(limit).toArray();

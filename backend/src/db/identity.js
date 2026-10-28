@@ -1,4 +1,5 @@
 import { getMongoClient, getMongoDatabase } from './mongodb.js';
+import { formatStoredDate } from '../utils/time.js';
 import { PERMISSIONS } from '../utils/permissions.js';
 
 let initialized;
@@ -223,7 +224,7 @@ export async function recordMongoAudit({ req, action, module, entity = null, ent
       meta: meta === null || meta === undefined || typeof meta === 'string' ? meta : JSON.stringify(meta),
       ip: req?.ip ?? null,
       user_agent: req?.headers?.['user-agent'] ?? null,
-      created_at: formatNow(),
+      created_at: formatStoredDate(),
     });
   } catch (error) {
     console.error('[mongo-audit] failed to persist entry:', error.message);
@@ -235,8 +236,3 @@ export async function identityCollectionsForUse() {
 }
 
 export { PERMISSIONS };
-
-function formatNow(date = new Date()) {
-  const pad = (value) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
