@@ -59,7 +59,7 @@ export default function OrdersList() {
       />
 
       <div className="toolbar">
-        <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} onClear={() => setSearch('')} placeholder="Search order no, patient, doctor…" />
+        <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); const next = new URLSearchParams(params); if (value) next.set('search', value); else next.delete('search'); setParams(next, { replace: true }); }} onClear={() => { setSearch(''); setPage(1); const next = new URLSearchParams(params); next.delete('search'); setParams(next, { replace: true }); }} placeholder="Search order no, patient, doctor…" />
         <Select value={status} onChange={(e) => applyFilter('status', e.target.value, setStatus)} options={[{ value: '', label: 'All statuses' }, ...ORDER_STATUS_OPTIONS]} style={{ width: 180 }} />
         <Select value={payment} onChange={(e) => applyFilter('payment_status', e.target.value, setPayment)} options={[{ value: '', label: 'All payments' }, ...PAYMENT_STATUS_OPTIONS]} style={{ width: 160 }} />
         <Button variant="ghost" icon="refresh" onClick={reload}>Refresh</Button>

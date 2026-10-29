@@ -54,7 +54,47 @@ async function enrichMany(reports) {
 	});
 }
 
-router.get('/', requirePermission('reports.view'), asyncHandler(async (req, res) => { const { page, limit, offset } = paginate(req.query); const filter = {}; if (req.query.status) { assert(REPORT_STATUSES.includes(req.query.status), 'Invalid report status filter'); filter.status = req.query.status; } if (req.query.patient_id) filter.patient_id = Number(req.query.patient_id); if (req.query.search) { const r = regex(req.query.search); filter.$or = [{ report_no: r }]; const { collections } = await appStore(); const patients = await collections.patients.find({ $or: [{ full_name: r }, { patient_code: r }] }, { projection: { id: 1 } }).toArray(); filter.$or.push({ patient_id: { $in: patients.map((p) => p.id) } }); } const { collections } = await appStore(); const total = await collections.reports.countDocuments(filter); const rows = await collections.reports.find(filter).sort({ created_at: -1, id: -1 }).skip(offset).limit(limit).toArray(); res.json({ data: await enrichMany(rows), meta: { total, page, limit, pages: Math.ceil(total / limit) || 1 } }); }));
+router.get('/', requirePermission('reports.view'), asyncHandler(async (req, res) => { const { page, limit, offset } = paginate(req.query); const filter = {}; if (req.query.status) { assert(REPORT_STATUSES.includes(req.query.status), 'Invalid report status filter'); filter.status = req.query.status; } if (req.query.patient_id) filter.patient_id = Number(req.query.patient_id); if (req.query.search) { const r = regex(req.query.search); filter.$or = [{ report_no: r }]; const { collections } = await appStore(); const patients = await collections.patients.find({ $or: [{ full_name: r }, { patient_code: r }] }, { projection: { id: 1 } }).toArray(); filter.$or.push({ patient_id: { $in: patients.map((p) => p.id) } }); }
+  // Date range filter: default to today and yesterday in Asia/Karachi timezone
+  // unless search is provided (search spans all dates).
+  // created_at is stored as a string, so $expr with $dateFromString is used
+  // for type-safe comparison against Date boundaries.
+  let dateExpr = null;
+  if (!req.query.search) {
+    if (req.query.start_date && req.query.end_date) {
+      dateExpr = {
+        $expr: {
+          $and: [
+            { $gte: [{ $dateFromString: { dateString: '$created_at', onError: null } }, new Date(req.query.start_date)] },
+            { $lt: [{ $dateFromString: { dateString: '$created_at', onError: null } }, new Date(req.query.end_date)] },
+          ],
+        },
+      };
+    } else {
+      // Default: reports from today and yesterday in Asia/Karachi timezone
+      const now = new Date();
+      const karachiOffset = 5 * 60 * 60 * 1000; // 5 hours in ms
+      const karachiNow = new Date(now.getTime() + karachiOffset);
+      const karachiTodayMidnight = new Date(karachiNow.getFullYear(), karachiNow.getMonth(), karachiNow.getDate());
+      const karachiYesterdayMidnight = new Date(karachiTodayMidnight.getTime() - 24 * 60 * 60 * 1000);
+      const karachiTomorrowMidnight = new Date(karachiTodayMidnight.getTime() + 24 * 60 * 60 * 1000);
+      // Convert Karachi day boundaries to UTC instants for MongoDB comparison
+      const startDateUTC = new Date(karachiYesterdayMidnight.getTime() - karachiOffset);
+      const endDateUTC = new Date(karachiTomorrowMidnight.getTime() - karachiOffset);
+      dateExpr = {
+        $expr: {
+          $and: [
+            { $gte: [{ $dateFromString: { dateString: '$created_at', onError: null } }, startDateUTC] },
+            { $lt: [{ $dateFromString: { dateString: '$created_at', onError: null } }, endDateUTC] },
+          ],
+        },
+      };
+    }
+  }
+  if (dateExpr) {
+    Object.assign(filter, dateExpr);
+  }
+  const { collections } = await appStore(); const total = await collections.reports.countDocuments(filter); const rows = await collections.reports.find(filter).sort({ created_at: -1, id: -1 }).skip(offset).limit(limit).toArray(); res.json({ data: await enrichMany(rows), meta: { total, page, limit, pages: Math.ceil(total / limit) || 1 } }); }));
 router.get('/pending', requirePermission('reports.view', 'reports.generate'), asyncHandler(async (req, res) => {
 	const { collections } = await appStore();
 	const rows = await collections.orders.aggregate([
