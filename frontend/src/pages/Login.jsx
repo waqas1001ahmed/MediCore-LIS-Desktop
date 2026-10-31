@@ -153,10 +153,12 @@ export default function Login() {
             </Button>
           </form>
 
-          <div className="auth-demo">
-            <strong>First run?</strong> The default administrator account is{' '}
-            <code>admin</code> / <code>Admin@123</code>. Change the password immediately after signing in.
-          </div>
+          {import.meta.env.DEV && (
+            <div className="auth-demo">
+              <strong>First run?</strong> The default administrator account is{' '}
+              <code>admin</code> / <code>Admin@123</code>. Change the password immediately after signing in.
+            </div>
+          )}
         </div>
       </main>
     </div>
